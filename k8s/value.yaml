@@ -1,0 +1,41 @@
+image:
+  repository: kong/kong-gateway
+  tag: "3.4.1.1"
+secretVolumes:
+- kong-cluster-cert
+admin:
+  enabled: false
+env:
+  role: data_plane
+  database: "off"
+  cluster_mtls: shared
+  cluster_control_plane: xx.xx.xx.xx:8005
+  # cluster_telemetry_endpoint for enterprise
+  cluster_telemetry_endpoint: xx.xx.xx.xx:8006
+  cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
+  cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+  lua_ssl_trusted_certificate: system
+  vitals: "on"
+
+proxy:
+  enabled: true
+  type: LoadBalancer
+  annotations: 
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb" 
+    service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+  labels:
+    enable-metrics: "true"
+  http:
+    enabled: true
+    servicePort: 80
+    containerPort: 8000
+    parameters: []
+  tls:
+    enabled: true
+    servicePort: 443
+    containerPort: 8443
+    parameters:
+    - http2
+
+ingressController:
+  enabled: false
