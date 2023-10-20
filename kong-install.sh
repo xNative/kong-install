@@ -123,15 +123,26 @@ function run_kong_cp_install(){
     ## Configure Kong For Enterprise
     echo "Running Kong migrations"
     sudo cp -p /etc/kong/kong.conf.default /etc/kong/kong.conf
-    sudo sed -i "$ a portal = on" $KONG_CONFIG
     sudo sed -i "$ a pg_host = $POSTGRES_HOST" $KONG_CONFIG
     sudo sed -i "$ a pg_password = $KONG_PASSWORD" $KONG_CONFIG
     sudo sed -i "$ a role = control_plane" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert = /etc/kong/cluster.crt" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert_key = /etc/kong/cluster.key" $KONG_CONFIG
-    sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
+    sudo sed -i "$ a admin_listen = 0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8444 http2 ssl reuseport backlog=16384" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
-    sudo sed -i "$ a admin_listen = 0.0.0.0:8001, 0.0.0.0:8003, 0.0.0.0:8444 ssl" $KONG_CONFIG
+
+    if [[ -n "$POSTGRES_PASSWORD" ]]; then
+    sudo sed -i "$ a pg_ssl = on" $KONG_CONFIG
+    sudo sed -i "$ a pg_ssl_required = on" $KONG_CONFIG
+    fi
+    if [ "$KONG_PACKAGE_NAME" == "kong-enterprise-edition" ]; then
+    sudo sed -i "$ a portal = on" $KONG_CONFIG
+    sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
+    sudo sed -i "$ a enforce_rbac = on" $KONG_CONFIG
+    sudo sed -i "$ a admin_gui_auth = basic-auth" $KONG_CONFIG
+    sudo sed -i "$ a admin_gui_session_conf = {"secret":"secret","storage":"kong","cookie_secure":false}" $KONG_CONFIG
+    fi
+
     KONG_PASSWORD=$KONG_PASSWORD sudo -E env "PATH=$PATH" kong migrations bootstrap > /dev/null  2>&1
 
     echo "Starting Kong"
