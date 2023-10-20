@@ -8,9 +8,11 @@ kong-ce lastest version https://download.konghq.com/gateway-3.x-ubuntu-jammy/poo
 # install script
 ```
 $ bash kong-install.sh -v x.x.x.x -p {kong edition}
-#Example for kong-enterprise-edition (-p default is kong-enterprise-edition)
+
+# Example for kong-enterprise-edition (-p default is kong-enterprise-edition)
 $ bash kong-install.sh -v 3.4.0.0 -p kong-enterprise-edition
-#Example for kong-gatwey
+
+# Example for kong-gatwey
 $ bash kong-install.sh -v 3.4.0 -p kong
 ```
 
