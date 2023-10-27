@@ -87,6 +87,11 @@ function ubuntu_install_postgres() {
 
 function run_kong_cp_install(){
     determine_os
+    
+    IS_ENTERPRISE=1
+    if [[ $KONG_PACKAGE_NAME == "kong" ]]; then
+        IS_ENTERPRISE=0
+    fi
 
     if [[ $DISTRO == "Ubuntu" ]]; then
         ubuntu_install_package;
@@ -107,8 +112,9 @@ function run_kong_cp_install(){
     if [[ -n "$POSTGRES_PASSWORD" ]]; then
         echo "Configure External Postgres "
         DEBCONF_NOWARNINGS=yes sudo apt-get install postgresql-client -y > /dev/null
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD $KONG_PASSWORD;" > /dev/null;
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "GRANT kong TO postgres; CREATE DATABASE kong OWNER kong;" > /dev/null;
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD '$KONG_PASSWORD';" > /dev/null;
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "GRANT kong TO postgres;" > /dev/null
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE DATABASE kong OWNER kong;" > /dev/null
     else
         ubuntu_install_postgres;
         if [[ $DB_EXISTS == 0 ]]; then
@@ -124,8 +130,8 @@ function run_kong_cp_install(){
     sudo cp ./cluster.key /etc/kong/cluster.key
     sudo rm ./cluster.key ./cluster.crt
 
-    ## Configure Kong For Enterprise
-    echo "Running Kong migrations"
+    ## Configure Kong Non-Default
+    echo "Configuring kong.conf"
     sudo cp -p /etc/kong/kong.conf.default /etc/kong/kong.conf
     sudo sed -i "$ a #============================================" $KONG_CONFIG
     sudo sed -i "$ a #===|          Kong Configured           |===" $KONG_CONFIG
@@ -149,12 +155,14 @@ function run_kong_cp_install(){
     sudo sed -i "$ a #admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
 
     if [[ -n "$POSTGRES_PASSWORD" ]]; then
+     ## Configure Kong For Externall Postgres
     sudo sed -i "$ a pg_host = $POSTGRES_HOST" $KONG_CONFIG
     sudo sed -i "$ a pg_port = $POSTGRES_PORT" $KONG_CONFIG
     sudo sed -i "$ a pg_ssl = on" $KONG_CONFIG
     sudo sed -i "$ a pg_ssl_required = on" $KONG_CONFIG
     fi
     if [[ $IS_ENTERPRISE -gt 0 ]]; then
+    ## Configure Kong For Enterprise Edition
     sudo sed -i "$ a portal = on" $KONG_CONFIG
     sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
     sudo sed -i "$ a enforce_rbac = on" $KONG_CONFIG
