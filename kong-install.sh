@@ -112,6 +112,12 @@ function run_kong_cp_install(){
         DEBCONF_NOWARNINGS=yes sudo apt-get install postgresql-client -y > /dev/null
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p 5432 -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD $KONG_PASSWORD;" > /dev/null;
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p 5432 -d postgres -U postgres -c "GRANT kong TO postgres; CREATE DATABASE kong OWNER kong;" > /dev/null;
+    else
+        ubuntu_install_postgres;
+        if [[ $DB_EXISTS == 0 ]]; then
+        sudo su - postgres -c "psql -c \"CREATE USER kong WITH PASSWORD '$KONG_PASSWORD';\" > /dev/null";
+        sudo su - postgres -c "psql -c \"CREATE DATABASE kong OWNER kong\" > /dev/null";
+        fi
     fi
 
     ## Configure Kong
@@ -209,7 +215,7 @@ function run_kong_st_install(){
     if [[ $DISTRO == "Ubuntu" ]]; then
         ubuntu_install_package;
         ubuntu_install_kong;
-        ubuntu_install_postgres
+        ubuntu_install_postgres;
     else
         echo "Unsupported OS: $DISTRO"
         exit 1
