@@ -1,5 +1,8 @@
 #!/bin/bash
 set -euo pipefail
+export TZ="Asia/Bangkok"
+SYS_DATE=$(date +'%Y-%m-%d %H:%M')
+echo "SYS_DATE: $SYS_DATE $TZ"
 
 ## Sourcing the Config File ##
 . ./kong-install.conf
@@ -101,17 +104,11 @@ function run_kong_cp_install(){
     KONG_PASSWORD=$(echo $RANDOM | md5sum | head -c 20)
 
     # Configure Postgres
-    DB_EXISTS=$(sudo su - postgres -c "psql -lqt" | cut -d \| -f 1 | grep -w kong | wc -l) || true
-    if [[ $DB_EXISTS == 0 ]]; then
-        sudo su - postgres -c "psql -c \"CREATE USER kong WITH PASSWORD '$KONG_PASSWORD';\" > /dev/null";
-        sudo su - postgres -c "psql -c \"CREATE DATABASE kong OWNER kong\" > /dev/null";
-    fi
-
     if [[ -n "$POSTGRES_PASSWORD" ]]; then
         echo "Configure External Postgres "
         DEBCONF_NOWARNINGS=yes sudo apt-get install postgresql-client -y > /dev/null
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p 5432 -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD $KONG_PASSWORD;" > /dev/null;
-        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p 5432 -d postgres -U postgres -c "GRANT kong TO postgres; CREATE DATABASE kong OWNER kong;" > /dev/null;
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD $KONG_PASSWORD;" > /dev/null;
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "GRANT kong TO postgres; CREATE DATABASE kong OWNER kong;" > /dev/null;
     else
         ubuntu_install_postgres;
         if [[ $DB_EXISTS == 0 ]]; then
@@ -125,31 +122,50 @@ function run_kong_cp_install(){
     sudo env "PATH=$PATH" kong hybrid gen_cert > /dev/null 2>&1
     sudo cp ./cluster.crt /etc/kong/cluster.crt
     sudo cp ./cluster.key /etc/kong/cluster.key
+    sudo rm ./cluster.key ./cluster.crt
 
     ## Configure Kong For Enterprise
     echo "Running Kong migrations"
     sudo cp -p /etc/kong/kong.conf.default /etc/kong/kong.conf
-    sudo sed -i "$ a pg_host = $POSTGRES_HOST" $KONG_CONFIG
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
+    sudo sed -i "$ a #===|          Kong Configured           |===" $KONG_CONFIG
+    sudo sed -i "$ a # File: kong.conf" $KONG_CONFIG
+    sudo sed -i "$ a # Configurator: $CONF_AUTHOR" $KONG_CONFIG
+    sudo sed -i "$ a # Date: $SYS_DATE $TZ" $KONG_CONFIG
+    sudo sed -i "$ a # Description: Non-Default Configuration" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Change History:" $KONG_CONFIG
+    sudo sed -i "$ a # YYYY-MM-DD: Description of the change and who made it." $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Version: 1.0" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a ## Usage: $KONG_PACKAGE install in $yn mode" $KONG_CONFIG
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
     sudo sed -i "$ a pg_password = $KONG_PASSWORD" $KONG_CONFIG
     sudo sed -i "$ a role = control_plane" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert = /etc/kong/cluster.crt" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert_key = /etc/kong/cluster.key" $KONG_CONFIG
     sudo sed -i "$ a admin_listen = 0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8444 http2 ssl reuseport backlog=16384" $KONG_CONFIG
-    sudo sed -i "$ a admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
+    sudo sed -i "$ a #admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
 
     if [[ -n "$POSTGRES_PASSWORD" ]]; then
+    sudo sed -i "$ a pg_host = $POSTGRES_HOST" $KONG_CONFIG
+    sudo sed -i "$ a pg_port = $POSTGRES_PORT" $KONG_CONFIG
     sudo sed -i "$ a pg_ssl = on" $KONG_CONFIG
     sudo sed -i "$ a pg_ssl_required = on" $KONG_CONFIG
     fi
-    if [ "$KONG_PACKAGE_NAME" == "kong-enterprise-edition" ]; then
+    if [[ $IS_ENTERPRISE -gt 0 ]]; then
     sudo sed -i "$ a portal = on" $KONG_CONFIG
     sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
     sudo sed -i "$ a enforce_rbac = on" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_auth = basic-auth" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_session_conf = {"secret":"secret","storage":"kong","cookie_secure":false}" $KONG_CONFIG
+    sudo sed -i "$ a #====================| KONG_PASSWORD=$KONG_PASSWORD |====================" $KONG_CONFIG
     fi
 
+    echo "Running Kong migrations"
     KONG_PASSWORD=$KONG_PASSWORD sudo -E env "PATH=$PATH" kong migrations bootstrap > /dev/null  2>&1
+
 
     echo "Starting Kong"
     sudo env "PATH=$PATH" kong start > /dev/null 2>&1
@@ -171,6 +187,11 @@ function run_kong_cp_install(){
 function run_kong_dp_install(){
     determine_os
 
+    IS_ENTERPRISE=1
+    if [[ $KONG_PACKAGE_NAME == "kong" ]]; then
+        IS_ENTERPRISE=0
+    fi
+
     if [[ $DISTRO == "Ubuntu" ]]; then
         ubuntu_install_package;
         ubuntu_install_kong;
@@ -185,22 +206,41 @@ function run_kong_dp_install(){
     
     # Configure Kong
     echo "Running Configuring Kong"
+    # CONFIG HEADER SECTION
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
+    sudo sed -i "$ a #===|          Kong Configured           |===" $KONG_CONFIG
+    sudo sed -i "$ a # File: kong.conf" $KONG_CONFIG
+    sudo sed -i "$ a # Configurator: $CONF_AUTHOR" $KONG_CONFIG
+    sudo sed -i "$ a # Date: $SYS_DATE $TZ" $KONG_CONFIG
+    sudo sed -i "$ a # Description: Non-Default Configuration" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Change History:" $KONG_CONFIG
+    sudo sed -i "$ a # YYYY-MM-DD: Description of the change and who made it." $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Version: 1.0" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a ## Usage: $KONG_PACKAGE install in $yn mode" $KONG_CONFIG
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
+    # CONFIG HEADER SECTION END
     sudo sed -i "$ a role = data_plane" $KONG_CONFIG
     sudo sed -i "$ a database = off " $KONG_CONFIG
     sudo sed -i "$ a proxy_listen = 0.0.0.0:80 reuseport backlog=16384, 0.0.0.0:443 http2 ssl reuseport backlog=16384" $KONG_CONFIG
-    sudo sed -i "$ a cluster_control_plane = $HOST_CP:8005 " $KONG_CONFIG
-    #cluster_telemetry_endpoint for enterpise version
-    sudo sed -i "$ a cluster_telemetry_endpoint = $HOST_CP:8006 " $KONG_CONFIG
     sudo sed -i "$ a cluster_cert = /etc/kong/cluster.crt " $KONG_CONFIG
     sudo sed -i "$ a cluster_cert_key = /etc/kong/cluster.key " $KONG_CONFIG
+    sudo sed -i "$ a cluster_control_plane = $HOST_CP:8005 " $KONG_CONFIG
 
-    # echo "Starting Kong"
-    # sudo env "PATH=$PATH" kong start > /dev/null 2>&1
+    if [[ $IS_ENTERPRISE -gt 0 ]]; then
+    #cluster_telemetry_endpoint for enterpise version
+    sudo sed -i "$ a cluster_telemetry_endpoint = $HOST_CP:8006 " $KONG_CONFIG
+    fi
+
+    echo "Starting Kong"
+    sudo env "PATH=$PATH" kong start > /dev/null 2>&1
 
     # Output success
     echo
     echo "==================================================="
-    echo "Kong Data Plane is now running on your system"
+    echo "Kong Data Plane is now configure on your system"
     echo "==================================================="
 }
 
@@ -238,7 +278,25 @@ function run_kong_st_install(){
     # Configure Kong
     echo "Running Kong migrations"
     sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
+        # CONFIG HEADER SECTION
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
+    sudo sed -i "$ a #===|          Kong Configured           |===" $KONG_CONFIG
+    sudo sed -i "$ a # File: kong.conf" $KONG_CONFIG
+    sudo sed -i "$ a # Configurator: $CONF_AUTHOR" $KONG_CONFIG
+    sudo sed -i "$ a # Date: $SYS_DATE $TZ" $KONG_CONFIG
+    sudo sed -i "$ a # Description: Non-Default Configuration" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Change History:" $KONG_CONFIG
+    sudo sed -i "$ a # YYYY-MM-DD: Description of the change and who made it." $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a # Version: 1.0" $KONG_CONFIG
+    sudo sed -i "$ a # " $KONG_CONFIG
+    sudo sed -i "$ a ## Usage: $KONG_PACKAGE install in $yn mode" $KONG_CONFIG
+    sudo sed -i "$ a #============================================" $KONG_CONFIG
+        # CONFIG HEADER SECTION END
     sudo sed -i "$ a pg_password = $KONG_PASSWORD" $KONG_CONFIG
+    sudo sed -i "$ a proxy_listen = 0.0.0.0:80 reuseport backlog=16384, 0.0.0.0:443 http2 ssl reuseport backlog=16384" $KONG_CONFIG
+
     KONG_PASSWORD=$KONG_PASSWORD sudo -E env "PATH=$PATH" kong migrations bootstrap > /dev/null  2>&1
 
     echo "Starting Kong"

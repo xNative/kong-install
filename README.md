@@ -16,6 +16,14 @@ $ bash kong-install.sh -v 3.4.0.0 -p kong-enterprise-edition
 $ bash kong-install.sh -v 3.4.0 -p kong
 ```
 
+# install script for data plane
+```
+# Download cluster.key and cluster.crt before running kong-install
+$ mkdir /etc/kong/
+$ scp root@{CP_HOST}:/etc/kong/cluster.key /etc/kong/
+$ scp root@{CP_HOST}:/etc/kong/cluster.crt /etc/kong/
+$ bash kong-install.sh -v 3.4.0 -p kong
+```
 
 # Other command
 
