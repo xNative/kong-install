@@ -115,6 +115,7 @@ function run_kong_cp_install(){
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE USER kong WITH PASSWORD '$KONG_PASSWORD';" > /dev/null;
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "GRANT kong TO postgres;" > /dev/null
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d postgres -U postgres -c "CREATE DATABASE kong OWNER kong;" > /dev/null
+        PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d kong -U postgres -c "GRANT ALL ON SCHEMA public TO kong;" > /dev/null
     else
         ubuntu_install_postgres;
         if [[ $DB_EXISTS == 0 ]]; then
@@ -166,8 +167,9 @@ function run_kong_cp_install(){
     sudo sed -i "$ a portal = on" $KONG_CONFIG
     sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
     sudo sed -i "$ a enforce_rbac = on" $KONG_CONFIG
+    sudo sed -i "$ a admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_auth = basic-auth" $KONG_CONFIG
-    sudo sed -i "$ a admin_gui_session_conf = {"secret":"secret","storage":"kong","cookie_secure":false}" $KONG_CONFIG
+    sudo sed -i '$ a admin_gui_session_conf = {\"secret\":\"secret\",\"storage\":\"kong\",\"cookie_secure\":false}' $KONG_CONFIG
     sudo sed -i "$ a #====================| KONG_PASSWORD=$KONG_PASSWORD |====================" $KONG_CONFIG
     fi
 
