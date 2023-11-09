@@ -217,6 +217,7 @@ function run_kong_dp_install(){
     # Configure Kong
     echo "Running Configuring Kong"
     # CONFIG HEADER SECTION
+    sudo cp -p /etc/kong/kong.conf.default /etc/kong/kong.conf
     sudo sed -i "$ a #============================================" $KONG_CONFIG
     sudo sed -i "$ a #===|          Kong Configured           |===" $KONG_CONFIG
     sudo sed -i "$ a # File: kong.conf" $KONG_CONFIG
@@ -234,6 +235,7 @@ function run_kong_dp_install(){
     # CONFIG HEADER SECTION END
     sudo sed -i "$ a role = data_plane" $KONG_CONFIG
     sudo sed -i "$ a database = off " $KONG_CONFIG
+    sudo sed -i "$ a status_listen = 0.0.0.0:8100 " $KONG_CONFIG
     sudo sed -i "$ a proxy_listen = 0.0.0.0:80 reuseport backlog=16384, 0.0.0.0:443 http2 ssl reuseport backlog=16384" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert = /etc/kong/cluster.crt " $KONG_CONFIG
     sudo sed -i "$ a cluster_cert_key = /etc/kong/cluster.key " $KONG_CONFIG
