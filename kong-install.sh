@@ -118,7 +118,9 @@ function run_kong_cp_install(){
         PGPASSWORD=$POSTGRES_PASSWORD psql -h $POSTGRES_HOST -p $POSTGRES_PORT -d kong -U postgres -c "GRANT ALL ON SCHEMA public TO kong;" > /dev/null
     else
         ubuntu_install_postgres;
+        DB_EXISTS=$(sudo su - postgres -c "psql -lqt" | cut -d \| -f 1 | grep -w kong | wc -l) || true
         if [[ $DB_EXISTS == 0 ]]; then
+        echo "CREATE USER kong WITH PASSWORD $KONG_PASSWORD"
         sudo su - postgres -c "psql -c \"CREATE USER kong WITH PASSWORD '$KONG_PASSWORD';\" > /dev/null";
         sudo su - postgres -c "psql -c \"CREATE DATABASE kong OWNER kong\" > /dev/null";
         fi
