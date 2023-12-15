@@ -1,8 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-wget https://github.com/xNative/kong-install/blob/main/kong-install.conf
+sudo wget https://github.com/xNative/kong-install/blob/main/kong-install.conf  > /dev/null  2>&1
 
-wget https://github.com/xNative/kong-install/blob/main/kong-install.sh
+sudo wget https://github.com/xNative/kong-install/blob/main/kong-install.sh  > /dev/null  2>&1
 
-printf 'cp\n' | bash kong-install.sh -v 3.4.2 -p kong
+sudo printf 'cp\n' |sudo bash kong-install.sh -v 3.4.2 -p kong  > /dev/null  2>&1
+
+sudo rm kong-install.conf
+
+sudo rm kong-install.sh
