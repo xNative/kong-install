@@ -167,6 +167,7 @@ function run_kong_cp_install(){
     if [[ $IS_ENTERPRISE -gt 0 ]]; then
     ## Configure Kong For Enterprise Edition
     sudo sed -i "$ a portal = on" $KONG_CONFIG
+    sudo sed -i "$ a portal_gui_protocol = http" $KONG_CONFIG
     sudo sed -i "$ a portal_gui_host = $HOST_CP:8003" $KONG_CONFIG
     sudo sed -i "$ a enforce_rbac = on" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
