@@ -38,4 +38,7 @@ $ curl -i -X POST http://localhost:8001/licenses \
 # To check whether the CP and DP nodes you just brought up are connected, run the following on a control plane
 curl -i -X GET http://localhost:8001/clustering/data-planes
 
+curl -i -X GET http://localhost:8001/clustering/data-planes \
+  -H 'Kong-Admin-Token:xxxxxxxxx'
+
 ```
