@@ -172,6 +172,16 @@ function run_kong_cp_install(){
     sudo sed -i "$ a admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
     sudo sed -i "$ a admin_gui_auth = basic-auth" $KONG_CONFIG
     sudo sed -i '$ a admin_gui_session_conf = {\"secret\":\"secret\",\"storage\":\"kong\",\"cookie_secure\":false}' $KONG_CONFIG
+    sudo sed -i "$ a ## SSL-HTTPS ## " $KONG_CONFIG
+    sudo sed -i '$ a #admin_gui_session_conf = {\"secret\":\"secret\",\"storage\":\"kong\" }' $KONG_CONFIG
+    sudo sed -i "$ a #admin_ssl_cert = /etc/kong/my-domain.crt" $KONG_CONFIG
+    sudo sed -i "$ a #admin_ssl_cert_key = /etc/kong/my-domain.key" $KONG_CONFIG
+    sudo sed -i "$ a #admin_gui_ssl_cert = /etc/kong/my-domain.crt" $KONG_CONFIG
+    sudo sed -i "$ a #admin_gui_ssl_cert_key = /etc/kong/my-domain.key" $KONG_CONFIG
+    sudo sed -i "$ a #portal_gui_ssl_cert = /etc/kong/my-domain.crt" $KONG_CONFIG
+    sudo sed -i "$ a #portal_gui_ssl_cert_key = /etc/kong/my-domain.key" $KONG_CONFIG
+    sudo sed -i "$ a #portal_api_ssl_cert = /etc/kong/my-domain.crt" $KONG_CONFIG
+    sudo sed -i "$ a #portal_api_ssl_cert_key = /etc/kong/my-domain.key" $KONG_CONFIG
     sudo sed -i "$ a #====================| KONG_PASSWORD=$KONG_PASSWORD |====================" $KONG_CONFIG
     fi
 
