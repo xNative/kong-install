@@ -326,7 +326,7 @@ function run_kong_st_install(){
     sudo sed -i "$ a #============================================" $KONG_CONFIG
         # CONFIG HEADER SECTION END
     sudo sed -i "$ a pg_password = $KONG_PASSWORD" $KONG_CONFIG
-    sudo sed -i "$ a proxy_listen = 0.0.0.0:80 reuseport backlog=16384, 0.0.0.0:443 http2 ssl reuseport backlog=16384" $KONG_CONFIG
+    sudo sed -i "$ a proxy_listen = 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384" $KONG_CONFIG
     sudo sed -i "$ a admin_listen = 0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8444 http2 ssl reuseport backlog=16384" $KONG_CONFIG
 
     KONG_PASSWORD=$KONG_PASSWORD sudo -E env "PATH=$PATH" kong migrations bootstrap > /dev/null  2>&1
