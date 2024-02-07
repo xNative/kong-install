@@ -331,6 +331,12 @@ function run_kong_st_install(){
 
     KONG_PASSWORD=$KONG_PASSWORD sudo -E env "PATH=$PATH" kong migrations bootstrap > /dev/null  2>&1
 
+    echo "Set ulimit"
+    sudo sed -i "$ a * soft nofile 4096" /etc/security/limits.conf
+    sudo sed -i "$ a * hard nofile 16384" /etc/security/limits.conf
+    sudo sed -i "$ a root soft nofile 4096" /etc/security/limits.conf
+    sudo sed -i "$ a root hard nofile 16384" /etc/security/limits.conf
+
     echo "Starting Kong"
     sudo env "PATH=$PATH" kong start > /dev/null 2>&1
 
