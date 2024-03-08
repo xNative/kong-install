@@ -41,4 +41,10 @@ curl -i -X GET http://localhost:8001/clustering/data-planes
 curl -i -X GET http://localhost:8001/clustering/data-planes \
   -H 'Kong-Admin-Token:xxxxxxxxx'
 
+Install BASH
+
+sudo wget https://raw.githubusercontent.com/xNative/kong-install/main/install.sh
+
+bash install.sh
+
 ```
