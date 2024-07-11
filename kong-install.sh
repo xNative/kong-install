@@ -25,11 +25,8 @@ function determine_os() {
 }
 
 function ubuntu_install_package() {
-    if [[ -n "$KONG_PACKAGE_VERSION" ]]; then
-        KONG_PACKAGE="$KONG_PACKAGE_NAME=$KONG_PACKAGE_VERSION"
-    else
-        KONG_PACKAGE="$KONG_PACKAGE_NAME"
-    fi
+    KONG_PACKAGE="$KONG_PACKAGE_NAME=$KONG_PACKAGE_VERSION"
+    KONG_PACKAGE_TAG=$(echo $KONG_PACKAGE_VERSION | sed 's/\.//' | cut -d '.' -f1)
 
     echo
     echo "########################################################"
@@ -50,18 +47,16 @@ function ubuntu_install_package() {
     fi
 
     # Ensure we have all the packages we need
-    DEBCONF_NOWARNINGS=yes TZ=Etc/UTC sudo -E apt-get -y install tzdata lsb-release ca-certificates > /dev/null 2>&1
-
+    DEBCONF_NOWARNINGS=yes TZ=Etc/UTC sudo -E apt-get -y install tzdata ca-certificates > /dev/null 2>&1
+    source /etc/*-release
 
 }
 function ubuntu_install_kong() {
+
     # Configure Kong repo if needed
-    if [[ ! -f /etc/apt/sources.list.d/kong.list ]]; then
-        echo "Adding Kong repo"
-        echo "deb [trusted=yes] https://download.konghq.com/gateway-3.x-ubuntu-$(lsb_release -sc)/ \
- default all" | sudo tee /etc/apt/sources.list.d/kong.list > /dev/null
-        sudo apt-get update > /dev/null
-    fi
+    echo "Adding Kong repo"
+    curl -1sLf "https://packages.konghq.com/public/gateway-$KONG_PACKAGE_TAG/setup.deb.sh" | sudo -E bash > /dev/null
+    sudo apt-get update > /dev/null
 
     # If $KONG_PACKAGE is not installed
     if [[ $(dpkg-query -W -f='${Status}' $KONG_PACKAGE 2>/dev/null | grep -c "ok installed") -eq 0 ]]; then
