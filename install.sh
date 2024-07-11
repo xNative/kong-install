@@ -5,7 +5,7 @@ sudo wget https://raw.githubusercontent.com/xNative/kong-install/main/kong-insta
 
 sudo wget https://raw.githubusercontent.com/xNative/kong-install/main/kong-install.sh  > /dev/null  2>&1
 
-sudo printf 'st\n' | sudo bash kong-install.sh -v 3.4.3.4 -p kong-enterprise-edition  > /dev/null  2>&1
+sudo printf 'st\n' | sudo bash kong-install.sh -v 3.4.3.11 -p kong-enterprise-edition  > /dev/null  2>&1
 #sudo printf 'st\n' | sudo bash kong-install.sh -v 3.4.3 -p kong  > /dev/null  2>&1
 
 sudo rm kong-install.conf
