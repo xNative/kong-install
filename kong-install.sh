@@ -1,5 +1,16 @@
 #!/bin/bash
 set -euo pipefail
+
+# Set default timezone to Asia/Bangkok
+sudo timedatectl set-timezone Asia/Bangkok
+
+# Test the timezone change and display date/time in readable format
+echo "**Current Timezone:**"
+timedatectl
+
+echo "**Current Date and Time (Asia/Bangkok):**"
+date +"%Y-%m-%d %H:%M:%S" # Example format: 2024-03-26 18:33:23
+
 export TZ="Asia/Bangkok"
 SYS_DATE=$(date +'%Y-%m-%d %H:%M')
 echo "SYS_DATE: $SYS_DATE $TZ"
