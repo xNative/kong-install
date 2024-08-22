@@ -42,6 +42,7 @@ function ubuntu_install_package() {
     echo
     echo "########################################################"
     echo "Installing $KONG_PACKAGE on Ubuntu"
+    echo "KONG_PACKAGE_TAG = $KONG_PACKAGE_TAG"
     echo "########################################################"
     echo
 
