@@ -3,6 +3,9 @@ kong-enterprise lastest version https://download.konghq.com/gateway-3.x-ubuntu-j
 
 kong-ce lastest version https://download.konghq.com/gateway-3.x-ubuntu-jammy/pool/all/k/kong/
 
+install kong manual with repo
+https://developer.konghq.com/gateway/install/3.9/
+
 ## for external postgres data source 
 
 # install script
