@@ -162,7 +162,8 @@ function run_kong_cp_install(){
     sudo sed -i "$ a cluster_cert = /etc/kong/cluster.crt" $KONG_CONFIG
     sudo sed -i "$ a cluster_cert_key = /etc/kong/cluster.key" $KONG_CONFIG
     sudo sed -i "$ a admin_listen = 0.0.0.0:8001 reuseport backlog=16384, 0.0.0.0:8444 http2 ssl reuseport backlog=16384" $KONG_CONFIG
-    sudo sed -i "$ a #admin_gui_url = http://$HOST_CP:8002" $KONG_CONFIG
+    sudo sed -i "$ a #admin_gui_url = https://$HOST_DP:443" $KONG_CONFIG
+    sudo sed -i "$ a #admin_gui_url = $HOST_DP/api-admin-path" $KONG_CONFIG
 
     if [[ -n "$POSTGRES_PASSWORD" ]]; then
      ## Configure Kong For Externall Postgres
