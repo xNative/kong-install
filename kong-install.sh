@@ -268,22 +268,50 @@ pg_remote() {
 }
 
 setup_local_postgres() {
+    # Nothing else (e.g. a Docker container) may hold the Postgres port
+    if ss -ltnpH 'sport = :5432' 2>/dev/null | grep -qv postgres; then
+        ss -ltnp 'sport = :5432' >&2 || true
+        die "Port 5432 is already used by another process (a Docker container?). Stop it or set POSTGRES_HOST to use it"
+    fi
+
     if ! dpkg-query -W -f='${Status}' postgresql 2>/dev/null | grep -q "ok installed"; then
         log "Installing PostgreSQL"
         run apt-get install "${APT_OPTS[@]}" postgresql
     else
         log "PostgreSQL already installed"
     fi
-    run systemctl enable --now postgresql
+    run systemctl enable postgresql
 
-    # postgresql.service returns before the cluster accepts connections
+    # Make sure a cluster exists (it is missing if /etc/postgresql was deleted)
+    if [[ -z $(pg_lsclusters -h 2>/dev/null) ]]; then
+        local pgver
+        pgver=$(find /usr/lib/postgresql -mindepth 1 -maxdepth 1 -printf '%f\n' | sort -V | tail -n 1)
+        [[ -n $pgver ]] || die "No PostgreSQL server binaries found in /usr/lib/postgresql"
+        log "No PostgreSQL cluster found, creating ${pgver}/main"
+        run pg_createcluster "$pgver" main
+    fi
+
+    # Start each cluster's own unit explicitly; on LXC the postgresql
+    # wrapper service does not always start postgresql@VER-NAME by itself
+    local ver name
+    while read -r ver name _; do
+        log "Starting PostgreSQL cluster ${ver}/${name}"
+        if ! run systemctl enable --now "postgresql@${ver}-${name}"; then
+            die "Could not start postgresql@${ver}-${name}. Check: journalctl -u postgresql@${ver}-${name} -n 50"
+        fi
+    done < <(pg_lsclusters -h)
+
     log "Waiting for PostgreSQL to accept connections"
     local up=0
     for _ in $(seq 1 30); do
         if (cd / && runuser -u postgres -- pg_isready -q) >>"$LOG" 2>&1; then up=1; break; fi
         sleep 1
     done
-    ((up)) || die "Local PostgreSQL did not become ready. Check: systemctl status postgresql@16-main"
+    if (( ! up )); then
+        pg_lsclusters >>"$LOG" 2>&1 || true
+        die "Local PostgreSQL did not become ready. Check: pg_lsclusters and journalctl -u 'postgresql@*' -n 50"
+    fi
+    log "PostgreSQL is ready"
 }
 
 ensure_pg_password() {
