@@ -26,7 +26,8 @@ set -Eeuo pipefail
 # ---------------------------------------------------------------------------
 KONG_PACKAGE_NAME=kong
 DEFAULT_KONG_VERSION=3.9.4
-CONF_FILE=./kong-install.conf
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CONF_FILE=$SCRIPT_DIR/kong-install.conf
 MODE=""
 
 KONG_DIR=/etc/kong
@@ -108,7 +109,7 @@ load_config() {
         . "$CONF_FILE"
         log "Loaded config from $CONF_FILE"
     else
-        warn "Config file $CONF_FILE not found, using defaults"
+        warn "Config file $CONF_FILE not found, using defaults (local PostgreSQL)"
     fi
 
     # Command line wins over the config file
@@ -165,6 +166,8 @@ validate() {
             || die "POSTGRES_PASSWORD is required when POSTGRES_HOST is set"
         [[ $POSTGRES_SSL == on || $POSTGRES_SSL == off ]] \
             || die "POSTGRES_SSL must be 'on' or 'off'"
+        [[ $POSTGRES_ADMIN_USER != kong ]] \
+            || die "POSTGRES_ADMIN_USER must not be 'kong': the installer creates the 'kong' role itself. Use the Postgres superuser (usually 'postgres')"
     fi
 
     [[ $LOCK_AFTER_DAYS =~ ^[0-9]+$ ]] \
@@ -272,6 +275,15 @@ setup_local_postgres() {
         log "PostgreSQL already installed"
     fi
     run systemctl enable --now postgresql
+
+    # postgresql.service returns before the cluster accepts connections
+    log "Waiting for PostgreSQL to accept connections"
+    local up=0
+    for _ in $(seq 1 30); do
+        if (cd / && runuser -u postgres -- pg_isready -q) >>"$LOG" 2>&1; then up=1; break; fi
+        sleep 1
+    done
+    ((up)) || die "Local PostgreSQL did not become ready. Check: systemctl status postgresql@16-main"
 }
 
 ensure_pg_password() {
@@ -299,8 +311,17 @@ setup_database() {
 
     ensure_pg_password
 
+    log "Testing database connection"
+    if ! "$psql_fn" -d postgres -c "SELECT 1" >>"$LOG" 2>&1; then
+        if [[ -n $POSTGRES_HOST ]]; then
+            die "Cannot connect to ${POSTGRES_HOST}:${POSTGRES_PORT} as ${POSTGRES_ADMIN_USER} (ssl=${POSTGRES_SSL}). See the psql error above in $LOG"
+        else
+            die "Cannot connect to local PostgreSQL. See the psql error above in $LOG"
+        fi
+    fi
+
     # Commands below contain the password, so they are not echoed to the log
-    role_exists=$("$psql_fn" -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='kong'")
+    role_exists=$("$psql_fn" -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname='kong'" 2>>"$LOG")
     if [[ $role_exists == 1 ]]; then
         log "DB role 'kong' exists, syncing its password"
         "$psql_fn" -d postgres -c "ALTER ROLE kong WITH LOGIN PASSWORD '${KONG_PG_PASSWORD}'" >>"$LOG" 2>&1
@@ -314,7 +335,7 @@ setup_database() {
         "$psql_fn" -d postgres -c "GRANT kong TO \"${POSTGRES_ADMIN_USER}\"" >>"$LOG" 2>&1
     fi
 
-    db_exists=$("$psql_fn" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='kong'")
+    db_exists=$("$psql_fn" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='kong'" 2>>"$LOG")
     if [[ $db_exists == 1 ]]; then
         log "Database 'kong' already exists"
     else
